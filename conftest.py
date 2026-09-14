@@ -33,7 +33,7 @@ def inventory_page(page: Page) -> InventoryPage:
     return inv
 
 def pytest_sessionstart(session):
-    # 确保报告目录存在(pytest-html 4.x 其实会自动创建父目录,此 hook 可留作示例)
+    # Ensure the reports directory exists (pytest-html 4.x creates parent dirs itself; this hook is kept as an example)
     os.makedirs("reports", exist_ok=True)
 
 
