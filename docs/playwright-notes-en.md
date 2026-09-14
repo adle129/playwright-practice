@@ -17,6 +17,7 @@
 10. [Flaky Tests](#10-flaky-tests)
 11. [Learning Roadmap](#11-learning-roadmap)
 12. [Command Cheat Sheet](#12-command-cheat-sheet)
+13. [Common pytest Plugins](#13-common-pytest-plugins)
 
 ---
 
@@ -360,6 +361,7 @@
 - **The debugging ladder (cheap → powerful, in order)**: read the error → watch it happen → print probes → screenshots/video → trace → page.pause()
 - **Step 0: read the error (solves 80%)**
   - **First check whether this error is the same one as last time**: if the error type changed (e.g. FileNotFoundError → Page.goto TimeoutError), the problem domain changed — following the old theory leads nowhere
+  - **Red alone vs red in the full suite**: red when run alone → a code problem (fix the assertion/locator); green alone but red in the full suite → an environment/load problem (rate limiting, network jitter, timing) — don't touch the assertions. Run a comparison experiment: single test → single file → full suite, widening step by step to find the trigger; after a red full run, `--lf` passing green = rate limiting
   - `FAILED` = assertion not met (compare expected vs actual); `ERROR` = exception thrown (bad locator / undefined name / syntax error)
   - Quick lookup:
 
@@ -526,6 +528,19 @@
   - **Prevent**: use `expect` auto-waiting, ban `sleep()`; rely on Playwright auto-waiting (click waits for visible/stable/enabled); isolate tests (function fixtures, independent data, no order dependence); stable locators (data-testid/role)
   - **Detect**: CI re-run statistics (flag tests that fail randomly at high frequency); failure-scene evidence (trace/screenshot/video); local reproduction (loop `--lf`)
   - **Stop the bleeding**: bounded retries (pytest-rerunfailures, `@pytest.mark.flaky(reruns=2)`, **cap retries at 1-2** — unlimited retries hide problems); quarantine (move known-flaky tests to a separate job that doesn't block the main pipeline — visible and tracked, just not in the way)
+  - **Retry setup in practice (two ways)**:
+    - Global: add `--reruns 1 --reruns-delay 3` to pyproject addopts (uniform rule for all tests)
+    - conftest hook (fine-grained control):
+
+      ```python
+      def pytest_collection_modifyitems(config, items):
+          for item in items:
+              if not item.get_closest_marker("flaky"):   # don't override custom settings
+                  item.add_marker(pytest.mark.flaky(reruns=1, reruns_delay=3))
+      ```
+
+    - `reruns_delay` = seconds to wait before retrying (useful against site rate limiting); retried passes show a `RERUN` marker and are recorded separately from first-pass passes in reports
+    - **Precedence (closer to the test wins)**: hand-written `@pytest.mark.flaky` > hook-added mark (the `if not` guard preserves manual config) > CLI/addopts `--reruns` (global fallback) > nothing (no retry). Marks always override CLI options; so pick addopts OR the hook — combining both makes the rules fight
   - **Cure**: flaky is a bug to fix, not "just re-run it"; converge the quarantine list to zero over time
 - **Interview answer structure**: definition in one sentence → three root-cause categories → four-step handling (prevent/detect/stop-the-bleeding/cure) → a real example (e.g. the saucedemo goto timeout); bonus words: retry caps, quarantine, trace forensics, test isolation
 
@@ -670,6 +685,53 @@ pytest -n auto --tracing=retain-on-failure --screenshot=only-on-failure \
 
 ---
 
+## 13. Common pytest Plugins
+
+- **What a plugin really is**: a conftest packaged as a pip package — it registers a bunch of hooks and fixtures (via entry points), and pytest auto-loads it after installation. pytest-playwright's `page` fixture, pytest-html's report, rerunfailures' retries — all come from this same mechanism
+- ⚠️ Engineering principle: **install only what you need** — every plugin brings startup overhead, configuration surface, and potential hook conflicts; ask "can't I do without it?" before installing
+
+### Execution control
+
+| Plugin | What it does | Status | Typical usage |
+|---|---|---|---|
+| pytest-xdist | multi-process parallel execution | ✅ installed | `pytest -n auto` |
+| pytest-rerunfailures | automatic retry on failure | ✅ just installed | `@pytest.mark.flaky(reruns=1, reruns_delay=3)` |
+| pytest-timeout | per-test timeout guard (prevents hangs from stalling CI) | optional | `pytest --timeout=300` or `@pytest.mark.timeout(60)` |
+| pytest-randomly | shuffle test order, exposing hidden order dependencies | optional (occasionally on CI) | `pytest -p randomly` |
+| pytest-order | force an execution order | ⚠️ use with caution — order dependence is a sign of test coupling | `@pytest.mark.order(1)` |
+| pytest-picked | run only tests related to uncommitted git changes | optional | `pytest --picked` |
+
+### Reporting & presentation
+
+| Plugin | What it does | Status | Typical usage |
+|---|---|---|---|
+| pytest-html | HTML report | ✅ installed | `--html=reports/report.html --self-contained-html` |
+| pytest-metadata | environment metadata in reports | ✅ installed (pytest-html dependency, automatic) | nothing to do |
+| allure-pytest | Allure reports (step trees / history trends) | to learn (big projects) | `--alluredir=...` → `allure serve` |
+| pytest-sugar | prettier terminal progress bar | optional | works on install |
+| pytest-clarity | more readable assertion diffs | optional | works on install |
+
+### Feature extensions
+
+| Plugin | What it does | Status | Typical usage |
+|---|---|---|---|
+| pytest-playwright | browser automation (the core of this project) | ✅ installed | `page` fixture, `--headed`, etc. |
+| pytest-cov | code coverage | ✅ installed | `pytest --cov=pages --cov-report=html` |
+| pytest-mock | convenient mock objects (common in unit tests) | optional | `mocker.patch(...)` |
+| pytest-assume | soft assertions: keep going after a failure, collect all results | optional | `pytest.assume(x == 1)` |
+| pytest-bdd | BDD style (Gherkin syntax) | as needed | `@scenario(...)` |
+| pytest-benchmark | performance benchmarks | as needed | `benchmark(fn)` |
+| pytest-asyncio | async test support | installed (as a dependency) | `@pytest.mark.asyncio` |
+
+### See what's installed
+
+```bash
+pytest --version       # lists all installed plugins at the bottom
+pip list | grep pytest
+```
+
+---
+
 ## Changelog
 
 - 2026-09-12: initial version — first 12 Q&A rounds (pytest config, headed/headless, POM, locators, expect, tools, pitfalls)
@@ -677,3 +739,4 @@ pytest -n auto --tracing=retain-on-failure --screenshot=only-on-failure \
 - 2026-09-12: correction — FileNotFoundError truth (pytest-playwright autouse fixture deletes test-results); exact=True semantics corrected against installed Playwright source
 - 2026-09-13: added download verification, E2E splitting principles, storage_state full usage, fixture execution order, fixture Python mechanics, "fixtures don't run unless requested", AAA precondition fixturization, "remove the writing duplication, keep the running repetition"
 - 2026-09-14: added redirect-type tests without bare assert, test file ownership rules, complete fixture extraction criteria, POM encapsulation interview phrasing, command cheat sheet
+- 2026-09-14: added section 13 — common pytest plugins (execution/reporting/features, with installed-vs-optional status); retry precedence rules in section 10

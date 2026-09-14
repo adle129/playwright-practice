@@ -16,6 +16,7 @@
 10. [Flaky 测试专题](#十flaky-测试专题)
 11. [进阶练习路线](#十一进阶练习路线)
 12. [常用命令速查表](#十二常用命令速查表)
+13. [常用 pytest 插件清单](#十三常用-pytest-插件清单)
 
 ---
 
@@ -363,6 +364,7 @@
 - **排查阶梯(从便宜到强大,按顺序用)**:读报错 → 用眼睛看 → print 探路 → 截图/录像 → trace → page.pause()
 - **第 0 步:读懂报错(解决 80% 问题)**
   - **先确认这次报错和上次是不是同一个**:报错类型变了(如 FileNotFoundError → Page.goto TimeoutError),说明问题域已切换,按老思路查必然无解
+  - **判断口诀:单跑红 vs 全量红**——单跑也红 → 代码问题(改断言/locator);单跑绿、全量红 → 环境/负载类问题(限流、网络抖动、时序),别去改断言。对照实验:单用例 → 单文件 → 全量,逐级放大找触发点;全量红时 `--lf` 重跑全绿 = 限流
   - `FAILED` = 断言没满足(看期望 vs 实际);`ERROR` = 代码抛异常(定位器错/变量未定义/语法错)
   - 常见报错速查:
 
@@ -530,6 +532,19 @@
   - **预防**:用 `expect` 自动等待禁止 `sleep()`;依赖 Playwright auto-waiting(click 前自动等可见/稳定/可点);测试隔离(function fixture、独立数据、不依赖顺序);稳定定位器(data-testid/role)
   - **发现**:CI 失败重跑统计(标记高频随机失败者);失败现场取证(trace/截图/录像);本地复现(循环跑 `--lf`)
   - **止血**:有限重试(pytest-rerunfailures,`@pytest.mark.flaky(reruns=2)`,**重试上限 1-2 次**,无限重试=藏问题);quarantine 隔离(已知 flaky 用例挪到独立 job,不阻塞主流水线,被看见被跟踪)
+  - **重试落地配置(两种)**:
+    - 全局:pyproject addopts 加 `--reruns 1 --reruns-delay 3`(所有测试统一)
+    - conftest 钩子(可精细控制):
+
+      ```python
+      def pytest_collection_modifyitems(config, items):
+          for item in items:
+              if not item.get_closest_marker("flaky"):   # 已有自定义的不覆盖
+                  item.add_marker(pytest.mark.flaky(reruns=1, reruns_delay=3))
+      ```
+
+    - `reruns_delay` = 重跑前等待秒数(对站点限流有用,给环境喘息);重跑成功输出带 `RERUN` 标记,报告里与一次通过分开记录
+    - **优先级(离测试越近越优先)**:手写 `@pytest.mark.flaky` > 钩子补打的标记(有 if not 守卫,手动优先)> 命令行/addopts 的 `--reruns`(全局兜底)> 不配不重跑。标记永远压过命令行参数;所以 addopts 与钩子**二选一**,都配会打架
   - **根治**:flaky 是要修的 bug,不是"重跑一下";定期收敛 quarantine 列表到零
 - **面试答题结构**:定义 1 句 → 根因三分类 → 处理四步(预防/发现/止血/根治)→ 结合真实实例(如 saucedemo goto 超时);加分词:重试上限、quarantine、trace 取证、测试隔离
 
@@ -673,6 +688,53 @@ pytest -n auto --tracing=retain-on-failure --screenshot=only-on-failure \
 
 ---
 
+## 十三、常用 pytest 插件清单
+
+- **先回顾插件的本质**:插件 = "打包成 pip 包的 conftest"——它注册一堆 hooks 和 fixtures(通过 entry point),安装后 pytest 自动加载。pytest-playwright 的 `page` fixture、pytest-html 的报告、rerunfailures 的重跑,都是这么来的
+- ⚠️ 工程原则:**插件够用就好,别装太多**——每个插件都带来启动开销、配置面和潜在的钩子冲突;装之前先问"没有它真的不行吗"
+
+### 执行控制类
+
+| 插件 | 干什么 | 状态 | 典型用法 |
+|---|---|---|---|
+| pytest-xdist | 多进程并行 | ✅ 已装 | `pytest -n auto` |
+| pytest-rerunfailures | 失败自动重试 | ✅ 刚装 | `@pytest.mark.flaky(reruns=1, reruns_delay=3)` |
+| pytest-timeout | 单测试超时保护(防卡死拖垮 CI) | 可选 | `pytest --timeout=300` 或 `@pytest.mark.timeout(60)` |
+| pytest-randomly | 随机打乱测试顺序,暴露隐藏的顺序依赖 | 可选(CI 偶尔开) | `pytest -p randomly` |
+| pytest-order | 指定执行顺序 | ⚠️ 慎用——依赖顺序 = 测试耦合的信号 | `@pytest.mark.order(1)` |
+| pytest-picked | 只跑和 git 未提交变更相关的测试 | 可选 | `pytest --picked` |
+
+### 报告与展示类
+
+| 插件 | 干什么 | 状态 | 典型用法 |
+|---|---|---|---|
+| pytest-html | HTML 报告 | ✅ 已装 | `--html=reports/report.html --self-contained-html` |
+| pytest-metadata | 报告里的环境元数据 | ✅ 已装(pytest-html 依赖,自动带) | 无需操作 |
+| allure-pytest | Allure 报告(步骤树/历史趋势) | 待学(大项目) | `--alluredir=...` → `allure serve` |
+| pytest-sugar | 美化终端进度条 | 可选 | 装完自动生效 |
+| pytest-clarity | 更可读的断言 diff | 可选 | 装完自动生效 |
+
+### 功能扩展类
+
+| 插件 | 干什么 | 状态 | 典型用法 |
+|---|---|---|---|
+| pytest-playwright | 浏览器自动化(本项目核心) | ✅ 已装 | `page` fixture、`--headed` 等 |
+| pytest-cov | 代码覆盖率 | ✅ 已装 | `pytest --cov=pages --cov-report=html` |
+| pytest-mock | 方便的 mock 对象(单元测试常用) | 可选 | `mocker.patch(...)` |
+| pytest-assume | 软断言:失败不中断,一次跑完全部断言 | 可选 | `pytest.assume(x == 1)` |
+| pytest-bdd | BDD 风格(Gherkin 语法) | 按需 | `@scenario(...)` |
+| pytest-benchmark | 性能基准测试 | 按需 | `benchmark(fn)` |
+| pytest-asyncio | async 测试支持 | 已装(依赖带) | `@pytest.mark.asyncio` |
+
+### 查看当前装了哪些
+
+```bash
+pytest --version       # 底部列出所有已装插件
+pip list | grep pytest
+```
+
+---
+
 ## 更新记录
 
 - 2026-09-12 初版:整理前 12 轮问答的知识点(pytest 配置、有头/无头、Page Object、定位器、expect、工具、踩坑)
@@ -714,3 +776,6 @@ pytest -n auto --tracing=retain-on-failure --screenshot=only-on-failure \
 - 2026-09-14 补充:第三节新增"fixture 抽取标准完整版"(独有前置写测试里/需插队时退一层用基础 fixture)
 - 2026-09-14 补充:第三节"locator 封装原则"补面试英文表达(一句话版/三理由/收尾金句/被追问话术)
 - 2026-09-14 补充:新增第十二节"常用命令速查表"(跑测试/Playwright 专属/报告/查看信息/工作流组合)
+- 2026-09-14 补充:第七节新增"单跑红 vs 全量红"判断口诀(环境 flaky 与代码问题的区分)
+- 2026-09-14 补充:新增第十三节"常用 pytest 插件清单"(执行控制/报告展示/功能扩展三类,标注已装与待学)
+- 2026-09-14 补充:第十节补"重试配置优先级"(手动标记>钩子标记>命令行>默认值)

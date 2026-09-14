@@ -60,7 +60,7 @@ def test_remove_product_from_detail_when_cart_has_two_items(inventory_page):
 
     #Go to the detail product page
     inventory_page.click_product_link(PRODUCT)
-    detail = InventoryItemPage(inventory_page,product_id="4")
+    detail = InventoryItemPage(inventory_page.page,product_id="4")
     detail.verify_inventory_item_page(PRODUCT)
 
     #Verify the cart number

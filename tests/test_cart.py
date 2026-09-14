@@ -37,18 +37,18 @@ def test_checkout(cart_page:CartPage):
 
 @pytest.mark.regression
 def test_remove_product_from_cart(cart_page_with_product:CartPage):
-    cart_page_with_product.remove_product_from_cart()
+    cart_page_with_product.remove_product_from_cart(PRODUCT)
     count = cart_page_with_product.get_items_count()
     assert count == 0, f"There should no item shown if remove all the prod"
 
 @pytest.mark.regression
 def test_product_name_shown(cart_page_with_product:CartPage):
     names = cart_page_with_product.get_item_names()
-    expect_name = "Sauce Labs Backpack"
+    expect_name = ['Sauce Labs Backpack']
     assert names == expect_name, f"The product name shown in cart page is not correct, EXPECTED:{expect_name} RECEIVED: {names}"
 
 @pytest.mark.regression
 def test_product_description_shown(cart_page_with_product:CartPage):
     descs = cart_page_with_product.get_item_descs()
-    expect_desc = "carry.allTheThings() with the sleek, streamlined Sly Pack that melds uncompromising style with unequaled laptop and tablet protection."
+    expect_desc = ['carry.allTheThings() with the sleek, streamlined Sly Pack that melds uncompromising style with unequaled laptop and tablet protection.']
     assert descs == expect_desc, f"The product description shown in cart page is not correct, EXPECTED:{expect_desc} RECEIVED: {descs}"

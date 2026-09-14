@@ -36,4 +36,9 @@ def pytest_sessionstart(session):
     # Ensure the reports directory exists (pytest-html 4.x creates parent dirs itself; this hook is kept as an example)
     os.makedirs("reports", exist_ok=True)
 
+def pytest_collection_modifyitems(config,items):
+    for item in items:
+        if not item.get_closest_marker("flaky"):
+            item.add_marker(pytest.mark.flaky(reruns=1,reruns_delay=3))
+
 

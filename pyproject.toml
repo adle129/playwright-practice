@@ -7,7 +7,7 @@ dependencies = []
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
-addopts = "-v --headed --slowmo=1000 --tracing=retain-on-failure --html=reports/report.html --self-contained-html"
+addopts = "-v --headed --reruns 1 --reruns-delay 3 --slowmo=1000 --tracing=retain-on-failure --html=reports/report.html --self-contained-html"
 markers = [
     "smoke: Quick tests to check basic functionality",
     "regression: Comprehensive tests for full application behavior"
