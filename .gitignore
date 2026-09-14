@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Playwright test artifacts
+test-results/
+reports/
+
+# Sensitive file: authentication state - NEVER commit!
+auth.json
+
+# IDE personal settings
+.vscode/
+
+# Personal learning notes (not to be uploaded yet)
+docs/

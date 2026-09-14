@@ -1,0 +1,14 @@
+[project]
+name = "playwright-practice"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-v --headed --slowmo=1000 --tracing=retain-on-failure --html=reports/report.html --self-contained-html"
+markers = [
+    "smoke: Quick tests to check basic functionality",
+    "regression: Comprehensive tests for full application behavior"
+]

@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python tests/smoke_test.py)",
+      "Bash(python -m pytest tests/smoke_test.py -v -s)",
+      "Bash(python -m pytest)",
+      "Bash(sed -n '110,150p' \"C:/Users/Lenovo/AppData/Local/Programs/Python/Python312/Lib/site-packages/pytest_html/plugin.py\")",
+      "Read(//c/Users/Lenovo/AppData/Local/Programs/Python/Python312/Lib/site-packages/pytest_html/**)",
+      "Bash(grep -rn \"def pytest_sessionstart\\\\|open\\(self\\\\|open\\(\" \"C:/Users/Lenovo/AppData/Local/Programs/Python/Python312/Lib/site-packages/pytest_html/\" --include=\"*.py\" | grep -v test | head -15)",
+      "Bash(grep -rln \"write_report\\\\|logfile\\\\|generate_report\" \"C:/Users/Lenovo/AppData/Local/Programs/Python/Python312/Lib/site-packages/pytest_html/\" --include=\"*.py\" | head; echo ---; grep -rn \"def pytest_sessionfinish\\\\|def pytest_sessionstart\\\\|_write_report\\\\|def write\" \"C:/Users/Lenovo/AppData/Local/Programs/Python/Python312/Lib/site-packages/pytest_html/html_report.py\" 2>/dev/null | head -10; ls \"C:/Users/Lenovo/AppData/Local/Programs/Python/Python312/Lib/site-packages/pytest_html/\")",
+      "Bash(grep -n \"def pytest_session\\\\|def _write_report\\\\|def write_report\\\\|open\\\\|makedirs\\\\|mkdir\" \"C:/Users/Lenovo/AppData/Local/Programs/Python/Python312/Lib/site-packages/pytest_html/basereport.py\" | head -12)",
+      "Bash(py -0p)",
+      "Read(//c/Users/Lenovo/AppData/Local/Programs/Python/**)",
+      "Bash(python -m pip show pytest-html)",
+      "Bash(python -c \"import pytest_html; print\\('加载的是:', pytest_html.__file__\\); import pytest_html.__version__ as v; print\\('版本:', v.__version__\\)\")",
+      "Read(//c/Users/Lenovo/AppData/Roaming/Python/Python312/site-packages/**)",
+      "Bash(sed -n '245,262p' \"C:/Users/Lenovo/AppData/Local/Programs/Python/Python312/Lib/site-packages/_pytest/config/__init__.py\")",
+      "Read(//c/Users/Lenovo/AppData/Local/Programs/Python/Python312/Lib/site-packages/_pytest/config/**)",
+      "Bash(grep -rn \"rmtree\\\\|rmdir\\\\|test-results\\\\|output\" \"C:/Users/Lenovo/AppData/Local/Programs/Python/Python312/Lib/site-packages/pytest_playwright/pytest_playwright.py\" | head -20)",
+      "Read(//c/Users/Lenovo/AppData/Local/Programs/Python/Python312/Lib/site-packages/pytest_playwright/**)",
+      "WebFetch(domain:www.udemy.com)",
+      "WebSearch",
+      "WebFetch(domain:cc-master-800843789351.us-central1.run.app)",
+      "WebFetch(domain:www.classcentral.com)",
+      "Bash(python -m pytest --collect-only -q)"
+    ]
+  }
+}
